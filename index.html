@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <title>Hatn.ae.is</title>
+  <style>
+    @font-face {
+      font-family: 'Season VF';
+      src: url('https://æ.is/fonts/SeasonVFTRIALVF.woff2') format('woff2');
+      /* src: url('/fonts/SeasonVFTRIALVF.woff2') format('woff2'); */
+    }
+
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --link-color: #0000ff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #222222;
+        --text-color: #ffffff;
+        --link-color: #64b5f6;
+      }
+    }
+
+    .dropcap {
+      float: left;
+      font-size: 4em;
+      padding: 0.1em 0.1em 0 0;
+      line-height: 0.8;
+      font-variation-settings: 'wght' 600, 'SERF' 100;
+    }
+
+    body {
+      text-align: center;
+      font-family: 'Season VF', sans-serif;
+      font-variation-settings: 'wght' 400, 'SERF' 100;
+      font-feature-settings: 'ss01' 1, 'ss02' 1, 'ss03' 1, 'ss04' 1, 'ss05' 1, 'zero' 1;
+      margin: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    a {
+      color: var(--link-color);
+    }
+
+    hr {
+      border-color: var(--text-color);
+    }
+
+    header {
+      margin-bottom: 50px;
+      position: relative;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    header video {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      transform: translate(-50%, -50%);
+      z-index: -1;
+    }
+    
+    .header-text {
+      position: relative;
+      z-index: 1;
+      margin-top: 25%;
+      color: #fff;
+      text-shadow: 0px 0px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      font-size: 5em;
+      font-variation-settings: 'wght' 600, 'SERF' 100;
+    }
+
+    .info {
+      text-align: right;
+      font-size: 1.25em;
+      margin-right: 110px;
+    }
+
+    .unmute button {
+      font-family: 'Season VF', sans-serif;
+      font-variation-settings: 'wght' 600, 'SERF' 100;
+      font-size: 1em;
+      margin: 20px 0px 20px 0px;
+      background-color: transparent;
+      border: 1px solid var(--text-color);
+      border-radius: 10px;
+      padding: 10px 20px;
+      width: 125px;
+      color: var(--text-color);
+    }
+
+    .unmute button:hover {
+      background-color: var(--text-color);
+      color: var(--bg-color);
+    }
+
+    main {
+      margin-left: 110px;
+      max-width: 960px;
+    }
+
+    section {
+      margin-bottom: 25px;
+    }
+    
+    section p {
+      text-align: left;
+      padding: 0 20px;
+      font-size: 24px;
+      line-height: 32px;
+      overflow-wrap: break-word;
+    }
+
+    section video {
+      width: 40%;
+      height: auto;
+      border-radius: 40px;
+      margin-top: 25px;
+      margin-bottom: 25px;
+    }
+
+    .divider {
+      width: 100%;
+      margin: 100px 0px 50px 0px;
+      text-align: center;
+      font-size: 5em;
+    }
+
+    footer {
+      height: 200px;
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const videos = document.querySelectorAll('video');
+      const unmuteButton = document.querySelector('.unmute button');
+      const audioContexts = new Map(); // Store audio contexts for each video
+      const gainNodes = new Map(); // Store gain nodes for each video
+      const fadeDuration = 0.5;
+      
+      // Initialize audio context and gain node for a video
+      function setupAudioContext(video) {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaElementSource(video);
+        const gainNode = audioContext.createGain();
+        
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        gainNode.gain.value = 0; // Start with volume at 0
+        
+        audioContexts.set(video, audioContext);
+        gainNodes.set(video, gainNode);
+      }
+
+      // Fade volume
+      function fadeVolume(video, start, end, duration) {
+        const gainNode = gainNodes.get(video);
+        const currentTime = gainNode.context.currentTime;
+        
+        gainNode.gain.setValueAtTime(start, currentTime);
+        gainNode.gain.linearRampToValueAtTime(end, currentTime + duration);
+      }
+
+      const options = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.5
+      };
+
+      // Initialize audio context for each video
+      videos.forEach(video => {
+        setupAudioContext(video);
+      });
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const video = entry.target;
+          if (entry.isIntersecting) {
+            video.play();
+            if (!video.muted) {
+              fadeVolume(video, 0, 1, fadeDuration);
+            }
+          } else {
+            fadeVolume(video, 1, 0, fadeDuration);
+            setTimeout(() => {
+              if (!entry.isIntersecting) { // Check if still not intersecting
+                video.pause();
+              }
+            }, fadeDuration * 1000); // Wait for fade out to complete
+          }
+        });
+      }, options);
+
+      videos.forEach(video => {
+        observer.observe(video);
+      });
+
+      // Add unmute functionality
+      unmuteButton.addEventListener('click', function() {
+        videos.forEach(video => {
+          if (video.muted) {
+            video.muted = false;
+            // Resume audio context if suspended (needed for browsers that suspend by default)
+            const audioContext = audioContexts.get(video);
+            if (audioContext.state === 'suspended') {
+              audioContext.resume();
+            }
+            // Only fade in if video is currently playing
+            if (!video.paused) {
+              fadeVolume(video, 0, 1, 0.5);
+            }
+            this.textContent = 'Mute';
+          } else {
+            fadeVolume(video, 1, 0, 0.5);
+            setTimeout(() => {
+              video.muted = true;
+            }, 500);
+            this.textContent = 'Unmute';
+          }
+        });
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <video src="vid/10x_01.mp4" autoplay muted loop playsinline></video>
+      <div class="header-text">
+        <h1>Julius, the Left Hand of Mary</h1>
+      </div>
+    </header>
+    <div class="info">
+      <div class="author">Text and audiovisual<br><a href="https://jackarmitage.com" target="_blank">JACK ARMITAGE</a></div>
+      <div class="unmute"><button>Unmute</button></div>
+    </div>
+    <main>
+      <section>
+        <p><span class="dropcap">J</span>ulius, the left hand of Mary, was an architect. He knew this was what he would be from a young age, when it wasn't the toys themselves that interested him, but the environments and landscapes that they could be found in. Sandpits, lego scenes, Simolean homes. Every chance he could, he would try to inspire and impress Mary, especially if her parents were around.</p>
+      </section>
+      <section>
+        <p>Eventually the message got through, and thus Julius attended the Bartlett School of Architecture at University College London. There, he encountered ideas of material, form and culture that at first tore down his simplistic worldview and allowed putting it back together again in fantastic and sometimes oddly terrifying ways. In the end however, it left him with a longing for his naivete, and his dreams were all but shelved in the years post graduation, while Julius was submerged under a blanket of malaise.</p>
+      </section>
+      <section>
+        <p>Mary didn't seem to care, which made it all the more painful, as Julius watched her merrily skip between pointless grad scheme jobs, eventually landing in office work and a daily grind of keyboard click-clack. Thankfully, being Mary's dominant, Julius at least was spared that fate, and still worked in space as Mary's screen pointer, idly day dreaming that instead of navigating text boxes and spreadsheet cells, he was nimbly drawing up plans for a Swiss cottage, or a small boathouse by a Swedish lake. Quaint stuff, compared to the bread and butter of a city architect, as a comforting escape from being reminded of the decreasing likelihood of such a career ever manifesting.</p>
+      </section>
+      <div class="divider">****</div>
+      <section>
+        <p>Julius often thanked whoever invented the computer mouse, for unintentionally filling his day with the least demanding and stimulating work imaginable, leaving him with full capacity to daydream, think, reflect, envision while Mary did her so-called knowledge work. These days, Julius spent most of his time as in his imagination, as a sculptor of landscapes. Mountain ranges with misty tops, creating majestic amphitheatres around still lakes, met in between by pine forests, and rocky outcrops. He was particular about how light entered and left these hollows between water and high mountain air, and would spend hours reshaping the skyline, and checking its reflection on the lake at different times of day. His favorite was a single unbroken sunbeam breaking through a cloud, glancing the pointy shoulder of a mountain ridge, catching slightly only on a cluster of tree tops, before finally spilling gold onto the lake.</p>
+        <video src="vid/10x_00.mp4" autoplay muted loop playsinline></video>
+        <p>Julius often thanked whoever invented the computer mouse, for unintentionally filling his day with the least demanding and stimulating work imaginable, leaving him with full capacity to daydream, think, reflect, envision while Mary did her so-called knowledge work. These days, Julius spent most of his time as in his imagination, as a sculptor of landscapes. Mountain ranges with misty tops, creating majestic amphitheatres around still lakes, met in between by pine forests, and rocky outcrops. He was particular about how light entered and left these hollows between water and high mountain air, and would spend hours reshaping the skyline, and checking its reflection on the lake at different times of day. His favorite was a single unbroken sunbeam breaking through a cloud, glancing the pointy shoulder of a mountain ridge, catching slightly only on a cluster of tree tops, before finally spilling gold onto the lake.</p>
+      </section>
+    </main>
+    <footer>
+      <p></p>
+    </footer>
+  </div>
+</body>
+</html>
